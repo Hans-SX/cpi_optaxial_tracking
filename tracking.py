@@ -11,42 +11,51 @@ from os.path import join
 import matplotlib.pyplot as plt
 import pickle
 
-from utils import readConfig, setDirectories_twocams, calculating_G2, refocusing_by_shifting, next_shift_range
-from config import shift, axial
+from utils import readConfig, setDirectories_twocams, Calculating_G2, Refocusing_by_Shifting, plot_G2s, target_axials, Measure_Benchmarking, Measures, Timer
+from config import axial, shift
+
 
 exec(readConfig())
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--DataSet', type=str)
-parser.add_argument('--refName', type=str, nargs='?', const='')
+parser.add_argument('--refName', type=str, nargs='?', const='refocused')
 args = parser.parse_args()
 
 datapath = join(os.getcwd(), os.pardir, args.DataSet, 'data')
 outpath = join(os.getcwd(), os.pardir, args.DataSet, args.refName)
 outDir, armAfiles, armBfiles = setDirectories_twocams(stdData=STD_PATH, stdOut=STD_PATH, timeTag=TT_BOOL, dataPath=datapath, outPath=outpath, armA=armA_PATH, armB=armB_PATH)
-fig_path = outDir
 
 # shifts = np.linspace(-3, 3, 40)
-idea_ref = 6.87 - 0.5 * np.array(range(1, 34))
-try_ref_to = [np.linspace(x, x + 6, 2) for x in idea_ref]
-# try_ref_to = [np.linspace(x - 0.5, x + 0.5, 5) for x in idea_ref]
+
+"""
+try_shifts: for each step the shifts are spanned from the expected point, +- 0.2 mm with 10 intervals each direction. Then converted to shifts.
+"""
+expect_ref = 6.87 - 0.5 * np.array(range(34))
+expect_ref = [(expect_ref[i] + expect_ref[i+1])/2 for i in range(len(expect_ref)-1)]
+try_ref_to = [target_axials(x, 10, 0.2) for x in expect_ref]
 try_shifts = [[shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
+# try_shifts = try_shifts[-1:] # for only one step
 
 cyc = 0
 init_guess = [1, 0, 0, 80]
 ref_steps = dict()
 axial_steps = dict()
 g2s = []
+timer = Timer()
+timer.start("Whole refocusing")
 for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
-    arr = calculating_G2(Afile, Bfile)
+# for Afile, Bfile in zip(armAfiles, armBfiles):
+    timer.start("Refocusing interval " + str(cyc+1))
+    arr = Calculating_G2(Afile, Bfile)
     G2 = arr.correlation(binA, binB)
     g2s.append(G2)
     G2 = arr.padding(pad=25)
     
-    if not os.path.exists(join(fig_path, str(cyc+1))):
-        os.makedirs(join(fig_path, str(cyc+1)))
+    if not os.path.exists(join(outDir, str(cyc+1))):
+        os.makedirs(join(outDir, str(cyc+1)))
     
-    refocusing = refocusing_by_shifting(G2, shifts, focal, MA, MB, pixA, pixB, join(fig_path, str(cyc+1)))
+    refocusing = Refocusing_by_Shifting(G2, shifts, focal, MA, MB, pixA, pixB, join(outDir, str(cyc+1)))
     refocused_results, axial_results = refocusing.evaluate_refocusG2fast_parallel()
 
     ref_steps["s" + str(cyc+1)] = refocused_results
@@ -60,13 +69,28 @@ for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
     if (cyc+1) % 10 == 0:
         print("Step " + str(cyc+1) + " finished.")
     
+    timer.stop("Refocusing interval " + str(cyc+1))
     cyc += 1
 
-with open(join(fig_path, "ref_steps.pkl"), "wb") as f1:
+timer.stop("Whole refocusing")
+
+with open(join(outDir, "ref_steps.pkl"), "wb") as f1:
     pickle.dump(ref_steps, f1)
 
-with open(join(fig_path, "axial_steps.pkl"), "wb") as f2:
+with open(join(outDir, "axial_steps.pkl"), "wb") as f2:
     pickle.dump(axial_steps, f2)
 
-with open(join(fig_path, "G2.npy"), "wb") as f3:
-    np.save(f3, g2s)
+print("Refocusing done, plot G2s.")
+plot_G2s(g2s, outDir)
+
+"""
+Measure analysis is separated to another process.
+
+print("Measure analysis.")
+measures = Measures()
+m1 = Measure_Benchmarking(ref_steps, axial_steps)
+m1.save_analysis(measures.apply_measures(apply_measures), expect_ref, outDir)
+# m1.save_analysis(measures.apply_measures(), expect_ref[-1], outDir)  # for only one step
+"""
+# with open(join(outDir, "G2.npy"), "wb") as f3:
+#     np.save(f3, g2s)

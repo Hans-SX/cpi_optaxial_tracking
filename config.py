@@ -18,7 +18,7 @@ G2_DIR     = ""
 
 # Binning
 #! if apply physical binning (seting on cameras), pixel size is 6.5e-3 * phybin
-binA, binB = 4,5
+binA, binB = 4, 5
 cambinA = 5
 pixel = 6.5e-3
 # NA, NB     = Na//binA, Nb//binB
@@ -35,4 +35,5 @@ def axial(shift):
 def shift(position):
     shift = - position * MA/MB / (position + focal) * pixB/pixA
     return shift
-# Array of planes to be refocused
+
+apply_measures = ['max_intensity', 'min_std_background', 'maxint_minstdbg']

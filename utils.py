@@ -14,26 +14,29 @@ import os, sys, time
 import matplotlib.pyplot as plt
 from os.path import join as joinDir
 import shutil
+import pickle
 from joblib import Parallel, delayed
+from functools import partial
+import decimal
 
 
 
-# class plot_ref():
-#     def __init__(self):
-    
-#     def _plt(self, refocused_result, axial_result, path):
-#         path = joinDir(path, "_Refocus_plot_"+ str(round(axial_result, 3))+".png")
+def plot_G2s(g2s, fpath):
+    if not os.path.exists(joinDir(fpath, 'G2s')):
+        os.makedirs(joinDir(fpath, 'G2s'))
+    cyc = 0
+    for g2 in g2s:
+        fig, (ax1,ax2) = plt.subplots(2,figsize=(6,10))
+        im1 = ax1.imshow(np.sum(g2, axis=(1,3)), cmap="gray")
+        im2 = ax2.imshow(np.sum(g2, axis=(0,2)), cmap="gray")
+        ax1.set_title("xA-xB Corr. Func."); ax2.set_title("yA-yB Corr. Func.")
+        fig.colorbar(im1, ax=ax1); fig.colorbar(im2, ax=ax2)
+        fig.savefig(joinDir(fpath, "G2s", f"G2_{cyc+1:03d}"))
+        cyc += 1
+        plt.close("all")
 
-#         fig = plt.figure()
-#         plt.imshow(refocused_result)
-#         plt.title("Refocused image_oof= "+ str(round(axial_result, 3)) + " mm")
-#         plt.colorbar()
-#         fig.savefig(path, dpi='figure',transparent=False)
-#         plt.close("all")
-
-#     def plt_parallel(self, refocused_results, axial_results, path, n_jobs=-1):
-#         Parallel(n_jobs=n_jobs, backend="loky")(delayed(self._plt)(refocused_result, axial_result, path) for refocused_result , axial_result in refocused_results, axial_results)
-
+"""
+It takes time to compute, and it may return a random spot as best in a noisy one.
 def gaussian2D(xy, amp, x0, y0, std):
     x, y = xy
     g2D = amp * np.exp(-((x - x0)**2/std**2 + (y - y0)**2/std**2)/2)
@@ -52,7 +55,7 @@ def next_shift_range(refocused_arr, init_guess):
     min_var_ind = np.argmin(np.array(stds))
     next_guess = [amp, x0, y0, std]
     return min_var_ind, next_guess
-
+"""
 # ---------------------------------------------------------------------------------
 
 def PrintSectionInit(text):
@@ -233,7 +236,7 @@ def PlotCorrFunc2D(corrFunc, outDir, differential=False):
     plt.close("all")
     PrintSectionClose()
 
-class calculating_G2():
+class Calculating_G2():
     def __init__(self, fileA, fileB):
         self.fileA = imread(fileA)
         self.fileB = imread(fileB)
@@ -269,7 +272,6 @@ class calculating_G2():
         angular = self._bin_3d_array(self.fileB, binB).reshape(N, NB*NB).astype("float32")
 
         # self.G2 = np.matmul(spatial.T, angular) / np.tensordot(np.sum(spatial,0), np.mean(angular,0), axes=0) - 1
-        # self.G2 = self.G2.reshape((NA, NA, NB, NB))
         self.G2 = np.matmul(spatial.T, angular)/N - np.tensordot(np.mean(spatial,0), np.mean(angular,0), axes=0)
         self.G2 = self.G2.reshape((NA, NA, NB, NB))
         return self.G2
@@ -278,7 +280,16 @@ class calculating_G2():
         self.G2 = np.pad(self.G2, ((pad, pad), (pad, pad), (0,0), (0,0)))
         return self.G2
 
-class refocusing_by_shifting():
+def target_axials(x, n, stepsize):
+    """
+    x: the expected position
+    n: 2*n + 1 will be the total examined positions
+    """
+    left_values = [x - i * stepsize for i in range(1, n+1)]
+    right_values = [x + i * stepsize for i in range(1, n+1)]
+    return left_values[::-1] + [x] + right_values
+
+class Refocusing_by_Shifting():
     def __init__(self, array4D, shifts, focal, MA, MB, pixA, pixB, path):
         self.array4D = array4D
         self.shifts = shifts
@@ -291,7 +302,7 @@ class refocusing_by_shifting():
 
         self.axial = self._axial(shift)
         fig = plt.figure()
-        plt.imshow(refocused_result)
+        plt.imshow(refocused_result, cmap='gray')
         plt.title("Refocused image_oof = "+ str(round(self.axial, 3)) + " mm")
         plt.colorbar()
         fig.savefig(path, dpi='figure',transparent=False)
@@ -403,3 +414,233 @@ class refocusing_by_shifting():
         axial_results = np.array([res[1] for res in results])      # Extract axial outputs
 
         return refocused_results, axial_results
+
+class Signal_to_BG_Noise_Ratio():
+    def __init__(self, thresholds):
+        self.thresholds = thresholds
+
+    def _rescaling(self, arr, rescale=(1, 1e1)):
+        # Rescaling the values of an 1-D array.
+        return rescale[0] + (rescale[1] - rescale[0]) * (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
+    
+    def _rescaling_pixelwise(self, arr, rescale=(1, 1e1)):
+        # Rescaling the values of each image.
+        
+        return rescale[0] + (rescale[1] - rescale[0]) * (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
+    
+    #def sbnr(self, threshold, ref_step, axial_exp):
+    def sbnr(self, ref_step, axial_exp, threshold=0.005):
+        background = np.asarray([ref_step[shift] * (ref_step[shift] < threshold *np.max(ref_step[shift])) for shift in range(len(ref_step))])
+        background = np.std(background, axis=(1,2))
+        re_bg = self._rescaling(background)
+        signal = np.asarray([ref_step[shift] * (ref_step[shift] >= 0.9 *np.max(ref_step[shift])) for shift in range(len(ref_step))])
+        signal = np.mean(ref_step, axis=(1,2))
+        re_sig = self._rescaling(signal)
+        sbnr = re_sig / re_bg
+        # sbnr = signal / background
+        sbnr_exp = sbnr[axial_exp]
+        ind_best = np.argwhere(sbnr == np.max(sbnr))[0]
+        name = "sbnr_" + f'%.1E' % decimal.Decimal(threshold)
+        return np.max(sbnr), ind_best, sbnr_exp, name
+    
+    def apply(self):
+        measures = []
+        for threshold in self.thresholds:
+            measures.append(partial(self.sbnr, threshold))
+        return measures
+    
+class Measures(Signal_to_BG_Noise_Ratio):
+    """
+    return:
+        val_best: the best value in a given step of the given measure.
+        ind_best: the index of the corresponding best value, it is connected to the axial position.
+        val_exp: the value of the given measure on the expected position of the given step.
+        str: return the measure name for the figure.
+    """
+    def __init__(self):
+        pass
+
+    def max_intensity(self, ref_step, axial_exp):
+        val_best = np.max(ref_step, axis=(1,2))
+        val_exp = val_best[axial_exp]
+        ind_best = np.argwhere(val_best == np.max(val_best))
+        val_best = np.max(val_best)
+        return val_best, ind_best, val_exp, "max_intensity"
+
+    def min_std(self, ref_step, axial_exp):
+        val_best = np.std(ref_step, axis=(1,2))
+        val_exp = val_best[axial_exp]
+        ind_best = np.argwhere(val_best == np.min(val_best))
+        val_best = np.min(val_best)
+        return val_best, ind_best, val_exp, "min_std"
+
+    def min_std_background(self, ref_step, axial_exp, threshold=0.005):
+        background = np.asarray([ref_step[shift] * (ref_step[shift] < threshold *np.max(ref_step[shift])) for shift in range(len(ref_step))])
+        val_best = np.std(background, axis=(1,2))
+        val_exp = val_best[axial_exp]
+        ind_best = np.argwhere(val_best == np.min(val_best))
+        val_best = np.min(val_best)
+        name = "min_std_bg_" + f'%.1E' % decimal.Decimal(threshold)
+        return val_best, ind_best, val_exp, name
+
+    # def max_min_intensity(self, ref_step, axial_exp):
+    #     val_best = np.min(ref_step, axis=(1,2))
+    #     val_exp = val_best[axial_exp]
+    #     ind_best = np.argwhere(val_best == np.max(val_best))
+    #     val_best = np.max(val_best)
+    #     return val_best, ind_best, val_exp, "max_min_intensity"
+    
+    def min_abs_min_intensity(self, ref_step, axial_exp):
+        val_best = np.abs(np.min(ref_step, axis=(1,2)))
+        val_exp = val_best[axial_exp]
+        ind_best = np.argwhere(val_best == np.min(val_best))
+        val_best = np.min(val_best)
+        return val_best, ind_best, val_exp, "min_abs_min_intensity"
+    
+    def maxint_minstdbg(self, ref_step, axial_exp, threshold=0.005):
+        background = np.asarray([ref_step[shift] * (ref_step[shift] < threshold *np.max(ref_step[shift])) for shift in range(len(ref_step))])
+        rank_maxint = np.argsort(np.max(ref_step, axis=(1,2)))
+        rank_minstdbg = np.argsort(-1 * np.std(background, axis=(1,2)))
+        rank = rank_maxint + rank_minstdbg
+        rank_exp = rank[axial_exp]
+        ind = np.argwhere(rank == np.max(rank))[0]  #Don't know why, it is in [[]] form.
+        rank = np.max(rank)
+        name = "maxint_minstdbg_" + f'%.1E' % decimal.Decimal(threshold)
+        return rank, ind, rank_exp, name
+
+    def apply_measures(self, apply_measures):
+        ms = []
+        for mstr in apply_measures:
+            m = getattr(self, mstr, None)
+            if callable(m):
+                ms.append(m)
+            else:
+                raise AttributeError(f"Measure '{m}' not found.")
+        return ms
+    
+class STD_BG_Thresholds():
+    def __init__(self, thresholds):
+        self.thresholds = thresholds
+    
+    def min_std_background(self, threshold, ref_step, axial_exp):
+        background = np.asarray([ref_step[shift] * (ref_step[shift] < threshold *np.max(ref_step[shift])) for shift in range(len(ref_step))])
+        val_best = np.std(background, axis=(1,2))
+        val_exp = val_best[axial_exp]
+        ind_best = np.argwhere(val_best == np.min(val_best))
+        val_best = np.min(val_best)
+        name = "min_std_bg_" + f'%.1E' % decimal.Decimal(threshold)
+        return val_best, ind_best, val_exp, name
+    
+    def maxint_minstdbg(self, threshold, ref_step, axial_exp):
+        background = np.asarray([ref_step[shift] * (ref_step[shift] < threshold *np.max(ref_step[shift])) for shift in range(len(ref_step))])
+        rank_maxint = np.argsort(np.max(ref_step, axis=(1,2)))
+        rank_minstdbg = np.argsort(-1 * np.std(background, axis=(1,2)))
+        rank = rank_maxint + rank_minstdbg
+        rank_exp = rank[axial_exp]
+        ind = np.argwhere(rank == np.max(rank))[0]  #Don't know why, it is in [[]] form.
+        rank = np.max(rank)
+        name = "maxint_minstdbg_" + f'%.1E' % decimal.Decimal(threshold)
+        return rank, ind, rank_exp, name
+    
+    def apply_std_bg(self):
+        measures = []
+        for threshold in self.thresholds:
+            measures.append(partial(self.min_std_background, threshold))
+        return measures
+    
+    def apply_maxint_minstdbg(self):
+        measures = []
+        for threshold in self.thresholds:
+            measures.append(partial(self.maxint_minstdbg, threshold))
+        return measures
+
+
+
+class Measure_Benchmarking():
+    """
+    measure: to decide which is the best refocused.
+    """
+    def __init__(self, ref_steps, axials_steps):
+        self.ref = ref_steps
+        self.axials = axials_steps
+        # self.measure = measure
+        self.expected = (len(ref_steps['s1']) - 1 )// 2
+
+    def _measure_vals_axials(self, measure):
+        vals_exp  = []
+        val_bests = []
+        axial_bests = []
+        for step in self.ref:
+            val_best, ind_best, val_exp, measure_name = measure(self.ref[step], self.expected)
+            val_bests.append(val_best)
+            axial_bests.append(self.axials[step][ind_best])
+            vals_exp.append(val_exp)
+        axial_bests = np.asarray(axial_bests).reshape(-1)
+        return val_bests, axial_bests,  vals_exp, measure_name
+    
+    # def _plot_performance(self, fname):
+    #     fig = plt.figure()
+    #     plt.plot(self.axial_exp, self.axial_exp, label='Expected position')
+    #     plt.plot(self.axial_exp, self.axial_bests, label='Refocused position ' + fname)
+    #     plt.xlabel("Target position in mm, focused at 0 while Platform position at 6.87mm.")
+    #     plt.ylabel("Axial position in mm.")
+    #     plt.legend()
+    #     fig.savefig(self.path, dpi='figure',transparent=False)
+    #     plt.close(fig)
+    
+    def total_diff(self, axial_exp, axial_bests):
+        return np.sum(np.abs(axial_exp - axial_bests))
+
+    def save_analysis(self, measures, axial_exp, path):
+        # self.measures = measures
+        # self.axial_exp = axial_exp
+        fig = plt.figure()
+        plt.plot(axial_exp, axial_exp, label='Expected position', c='black')
+        # plt.scatter(axial_exp, axial_exp, label='Expected position')
+        axial_estimate = dict()
+
+        for measure in measures:
+            val_bests, axial_bests,  val_exp, measure_name = self._measure_vals_axials(measure)
+            axial_estimate[measure_name] = axial_bests
+            # evalu = self.total_diff(axial_exp, axial_bests)
+            evalu = np.linalg.norm(axial_bests - axial_exp)  #L2-norm.
+            # fname = joinDir(path, measure_name)
+            # plt.plot(axial_exp, axial_bests)
+            plt.scatter(axial_exp, axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
+            # self._plot_performance(fname)
+            
+            # save_data = {
+            #     'val_bests': val_bests,
+            #     'axial_bests': axial_bests,
+            #     'val_exp': val_exp,
+            #     'axial_exp': axial_exp
+            # }
+
+            # with open(path + "/" + measure_name + ".pkl", "wb") as f1:
+            #     pickle.dump(save_data, f1)
+
+        plt.xlabel("Target position in mm, focused at 0 while Platform position at 6.87mm.")
+        plt.ylabel("Axial position in mm.")
+        plt.legend()
+        fig.savefig(path + '/measures_comparison', dpi='figure', transparent=False)
+        plt.close(fig)
+        return axial_estimate
+    
+class Timer:
+    def __init__(self):
+            self.start_times = {}
+            self.elapsed_times = {}
+    def start(self, label):
+        #   self.start_times[label] = time.time()
+          self.start_times[label] = time.perf_counter()
+    def stop(self, label):
+        if label in self.start_times:
+            # elapsed_time = time.time() - self.start_times[label]
+            elapsed_time = time.perf_counter() - self.start_times[label]
+            self.elapsed_times[label] = elapsed_time
+        else:
+             print(f"Timer for {label} is not started.")
+    def savefile(self, filename):
+        with open(filename, 'w') as file:
+            for label in self.elapsed_times:
+                file.write(f"{label}, {self.elapsed_times[label]}\n")
