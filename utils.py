@@ -439,14 +439,17 @@ class Signal_to_BG_Noise_Ratio():
         sbnr = re_sig / re_bg
         # sbnr = signal / background
         sbnr_exp = sbnr[axial_exp]
-        ind_best = np.argwhere(sbnr == np.max(sbnr))[0]
+        if len(sbnr) < 2:
+            ind_best = 0
+        else:
+            ind_best = np.argwhere(sbnr == np.max(sbnr))[0]
         name = "sbnr_" + f'%.1E' % decimal.Decimal(threshold)
         return np.max(sbnr), ind_best, sbnr_exp, name
     
     def apply(self):
         measures = []
         for threshold in self.thresholds:
-            measures.append(partial(self.sbnr, threshold))
+            measures.append(partial(self.sbnr, threshold=threshold))
         return measures
     
 class Measures(Signal_to_BG_Noise_Ratio):
@@ -482,13 +485,6 @@ class Measures(Signal_to_BG_Noise_Ratio):
         val_best = np.min(val_best)
         name = "min_std_bg_" + f'%.1E' % decimal.Decimal(threshold)
         return val_best, ind_best, val_exp, name
-
-    # def max_min_intensity(self, ref_step, axial_exp):
-    #     val_best = np.min(ref_step, axis=(1,2))
-    #     val_exp = val_best[axial_exp]
-    #     ind_best = np.argwhere(val_best == np.max(val_best))
-    #     val_best = np.max(val_best)
-    #     return val_best, ind_best, val_exp, "max_min_intensity"
     
     def min_abs_min_intensity(self, ref_step, axial_exp):
         val_best = np.abs(np.min(ref_step, axis=(1,2)))
@@ -554,8 +550,6 @@ class STD_BG_Thresholds():
             measures.append(partial(self.maxint_minstdbg, threshold))
         return measures
 
-
-
 class Measure_Benchmarking():
     """
     measure: to decide which is the best refocused.
@@ -563,7 +557,7 @@ class Measure_Benchmarking():
     def __init__(self, ref_steps, axials_steps):
         self.ref = ref_steps
         self.axials = axials_steps
-        # self.measure = measure
+        # The expected position is the middle one, the refocused range is setup accordingly.
         self.expected = (len(ref_steps['s1']) - 1 )// 2
 
     def _measure_vals_axials(self, measure):
@@ -595,7 +589,7 @@ class Measure_Benchmarking():
         # self.measures = measures
         # self.axial_exp = axial_exp
         fig = plt.figure()
-        plt.plot(axial_exp, axial_exp, label='Expected position', c='black')
+        plt.plot(range(len(axial_exp)), axial_exp, label='Expected position', c='black')
         # plt.scatter(axial_exp, axial_exp, label='Expected position')
         axial_estimate = dict()
 
@@ -603,10 +597,10 @@ class Measure_Benchmarking():
             val_bests, axial_bests,  val_exp, measure_name = self._measure_vals_axials(measure)
             axial_estimate[measure_name] = axial_bests
             # evalu = self.total_diff(axial_exp, axial_bests)
-            evalu = np.linalg.norm(axial_bests - axial_exp)  #L2-norm.
+            evalu = np.linalg.norm(axial_bests - axial_exp) / len(axial_bests) #L2-norm / num of expected positions.
             # fname = joinDir(path, measure_name)
-            # plt.plot(axial_exp, axial_bests)
-            plt.scatter(axial_exp, axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
+            # plt.scatter(range(len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
+            plt.plot(range(len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
             # self._plot_performance(fname)
             
             # save_data = {

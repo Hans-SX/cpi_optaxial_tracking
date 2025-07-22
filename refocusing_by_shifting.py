@@ -12,6 +12,12 @@ import matplotlib.pyplot as plt
 from time import time
 from scipy.ndimage import shift as ndi_shift
 
+"""
+Original code from Gianlorenzo for refocusing by shifting pixels.
+It is splitted and altered to utils.py and tracking.py.
+This script is not called in the current working flow.
+"""
+
 angular = io.imread("./1h_lowTemp/data/angular/angular.tif")
 spatial = io.imread("./1h_lowTemp/data/spatial/spatial.tif")
 

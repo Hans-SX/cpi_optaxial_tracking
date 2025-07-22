@@ -13,29 +13,43 @@ import pickle
 
 from utils import readConfig, setDirectories_twocams, Calculating_G2, Refocusing_by_Shifting, plot_G2s, target_axials, Measure_Benchmarking, Measures, Timer
 from config import axial, shift
+from moving_patterns import BigStepForward_SmallStepBack, SinusoidalForward, Refocused_range
 
+"""
+- Run this code in conda env cpi_tracking under the parent directory cpi_optaxial_tracking.
+- The layout of data and code structure will be:
+    |parent folder
+        |cpi_optaxial_tracking
+            |tracking.py
+        |DataSet
+            |data
+                |spatial
+                |angular
+            |refName
+The argument --DataSet specifies which data set to be used and save the refocused results to the --refName folder.
+The argument --pattern specifies which kind of pattern is used. It should be the pattern when the selected data set is produced.
+The pattern here is used to generate the positions to be refocused to, in case the movement is unknown, need to add a more general range depending on the limited information about the position of the target.
+"""
 
 exec(readConfig())
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--DataSet', type=str)
-parser.add_argument('--refName', type=str, nargs='?', const='refocused')
+parser.add_argument('--refName', nargs='?', default='refocused', type=str)
+parser.add_argument('--pattern', nargs='?', default=1, choices=[0, 1, 2, 3], type=int)
 args = parser.parse_args()
 
 datapath = join(os.getcwd(), os.pardir, args.DataSet, 'data')
 outpath = join(os.getcwd(), os.pardir, args.DataSet, args.refName)
 outDir, armAfiles, armBfiles = setDirectories_twocams(stdData=STD_PATH, stdOut=STD_PATH, timeTag=TT_BOOL, dataPath=datapath, outPath=outpath, armA=armA_PATH, armB=armB_PATH)
 
-# shifts = np.linspace(-3, 3, 40)
-
-"""
-try_shifts: for each step the shifts are spanned from the expected point, +- 0.2 mm with 10 intervals each direction. Then converted to shifts.
-"""
-expect_ref = 6.87 - 0.5 * np.array(range(34))
-expect_ref = [(expect_ref[i] + expect_ref[i+1])/2 for i in range(len(expect_ref)-1)]
-try_ref_to = [target_axials(x, 10, 0.2) for x in expect_ref]
-try_shifts = [[shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
-# try_shifts = try_shifts[-1:] # for only one step
+pattern = {
+    0: Refocused_range(shift).fixed(),
+    1: Refocused_range(shift, BigStepForward_SmallStepBack(0, 17, 6, pattern=np.array((16, -8))).generate()).bigf_smallb()[0],
+    2: Refocused_range(shift, SinusoidalForward(0, 17, 66, frequency=3).generate()).sinusoidal()[0],      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
+    3: Refocused_range(shift).step_34()
+}
+try_shifts = pattern[args.pattern]
 
 cyc = 0
 init_guess = [1, 0, 0, 80]

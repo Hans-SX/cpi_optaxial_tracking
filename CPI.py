@@ -18,7 +18,11 @@ import matplotlib.pyplot as plt
 import shutil
 # from scipy.interpolate.interpn import interpn as interp
 
-
+"""
+Some functions and procedure flow from previous version of refocusing algorithm.
+Moved some part of it to utils.py.
+This script is not called in the current working flow.
+"""
 
 
 def RefocusSection(corrFun, transf, refArray, dpA, dpB, maxInt=False, correc=False):
@@ -42,11 +46,6 @@ def RefocusSection(corrFun, transf, refArray, dpA, dpB, maxInt=False, correc=Fal
         def RefocusSinglePixel(newPoints):
             return np.sum(interp(points, corrFun, newPoints))
         
-        
-        
-        
-        
-
 def ComputeCorrelations(A, B, differential=False):
     PrintSectionInit('Computing correlations... {}'.format("(With differential)" if differential else ''))
     start = Time()
