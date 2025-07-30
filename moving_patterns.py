@@ -78,15 +78,15 @@ class Refocused_range():
 
     def step_34(self):
         expect_ref = 6.87 - np.linspace(0.25, 16.75, 34)
-        try_ref_to = [target_axials(x, 10, 0.2) for x in expect_ref]
+        try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
-        return try_shifts
+        return try_shifts, expect_ref
 
     def fixed(self):
         expect_ref = 6.87 - 0.25 * np.array(range(66))
         try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
-        return try_shifts
+        return try_shifts, expect_ref
     
     def bigf_smallb(self):
         expect_ref = []
@@ -106,7 +106,7 @@ class Refocused_range():
     
     def sinusoidal(self):
         expect_ref = 6.87 - self.pos
-        try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
-        # try_ref_to = [target_axials(x, 5, 0.3) for x in expect_ref]
+        # try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
+        try_ref_to = [target_axials(x, 5, 0.3) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref

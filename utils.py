@@ -266,14 +266,18 @@ class Calculating_G2():
     
     def correlation(self, binA, binB):
         N = self.fileA.shape[0]
-        NA = self.fileA.shape[1]//binA
-        NB = self.fileB.shape[1]//binB
-        spatial = self._bin_3d_array(self.fileA, binA).reshape(N, NA*NA).astype("float32")
-        angular = self._bin_3d_array(self.fileB, binB).reshape(N, NB*NB).astype("float32")
+        # NA = self.fileA.shape[1]//binA
+        # NB = self.fileB.shape[1]//binB
+        NA1 = self.fileA.shape[1]//binA
+        NB1 = self.fileB.shape[1]//binB
+        NA2 = self.fileA.shape[2]//binA
+        NB2 = self.fileB.shape[2]//binB
+        spatial = self._bin_3d_array(self.fileA, binA).reshape(N, NA1*NA2).astype("float32")
+        angular = self._bin_3d_array(self.fileB, binB).reshape(N, NB1*NB2).astype("float32")
 
         # self.G2 = np.matmul(spatial.T, angular) / np.tensordot(np.sum(spatial,0), np.mean(angular,0), axes=0) - 1
         self.G2 = np.matmul(spatial.T, angular)/N - np.tensordot(np.mean(spatial,0), np.mean(angular,0), axes=0)
-        self.G2 = self.G2.reshape((NA, NA, NB, NB))
+        self.G2 = self.G2.reshape(NA1, NA2, NB1, NB2)
         return self.G2
     
     def padding(self, pad):

@@ -44,10 +44,10 @@ outpath = join(os.getcwd(), os.pardir, args.DataSet, args.refName)
 outDir, armAfiles, armBfiles = setDirectories_twocams(stdData=STD_PATH, stdOut=STD_PATH, timeTag=TT_BOOL, dataPath=datapath, outPath=outpath, armA=armA_PATH, armB=armB_PATH)
 
 pattern = {
-    0: Refocused_range(shift).fixed(),
-    1: Refocused_range(shift, BigStepForward_SmallStepBack(0, 17, 6, pattern=np.array((16, -8))).generate()).bigf_smallb()[0],
-    2: Refocused_range(shift, SinusoidalForward(0, 17, 66, frequency=3).generate()).sinusoidal()[0],      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
-    3: Refocused_range(shift).step_34()
+    0: Refocused_range(shift).fixed()[0],
+    1: Refocused_range(shift, BigStepForward_SmallStepBack(0, 17, 66, pattern=np.array((2, -1))).generate()).bigf_smallb()[0],
+    2: Refocused_range(shift, SinusoidalForward(0, 17, 99, frequency=10, amp=1).generate()).sinusoidal()[0],      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
+    3: Refocused_range(shift).step_34()[0]
 }
 try_shifts = pattern[args.pattern]
 
