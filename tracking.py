@@ -45,14 +45,14 @@ outDir, armAfiles, armBfiles = setDirectories_twocams(stdData=STD_PATH, stdOut=S
 
 pattern = {
     0: Refocused_range(shift).fixed()[0],
-    1: Refocused_range(shift, BigStepForward_SmallStepBack(0, 17, 66, pattern=np.array((2, -1))).generate()).bigf_smallb()[0],
-    2: Refocused_range(shift, SinusoidalForward(0, 17, 99, frequency=10, amp=1).generate()).sinusoidal()[0],      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
+    1: Refocused_range(shift, BigStepForward_SmallStepBack(0, 17, pattern=np.array((14, -4))).pos_frames()['pos']).bigf_smallb()[0],
+    2: Refocused_range(shift, SinusoidalForward(0, 17, 90, frequency=3, amp=3).pos_frames()['pos']).sinusoidal()[0],      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
     3: Refocused_range(shift).step_34()[0]
 }
 try_shifts = pattern[args.pattern]
 
 cyc = 0
-init_guess = [1, 0, 0, 80]
+# init_guess = [1, 0, 0, 80]
 ref_steps = dict()
 axial_steps = dict()
 g2s = []
