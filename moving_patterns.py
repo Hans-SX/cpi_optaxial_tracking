@@ -10,7 +10,7 @@ import numpy as np
 # from andor3 import Andor3
 from pipython import GCSDevice
 from pipython import pitools
-from itertools import cycle
+from itertools import cycle, repeat
 
 """
 Duplicated from the moving_patterns.py in acquisition_while_moving folder.
@@ -140,3 +140,8 @@ class Refocused_range():
         try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
+    
+    def one_position(self):
+        try_ref_to = target_axials(self.pos, 2, 0.5)
+        try_shifts = [self.shift(try_ref_to[x]) for x, _ in enumerate(try_ref_to)]
+        return repeat(try_shifts), self.pos
