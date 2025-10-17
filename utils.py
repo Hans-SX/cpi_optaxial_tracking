@@ -386,9 +386,12 @@ class Refocusing_by_Shifting():
         for j in range(NBy):
             for i in range(NBx):
                 if -y_shifts[j]%1==0 and x_shifts[i]%1==0:
+                    # for simulation data, reflect x.
+                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
                     refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
                 else:
-                    refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
+                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
         self.axial = self._axial(shift)
         self._plt(refocused, shift, ind)
         return refocused, self.axial
@@ -593,7 +596,7 @@ class Measure_Benchmarking():
         # self.measures = measures
         # self.axial_exp = axial_exp
         fig = plt.figure()
-        plt.plot(range(len(axial_exp)), axial_exp, label='Expected position', c='black')
+        plt.plot(range(1, 1 + len(axial_exp)), axial_exp, label='Expected position', c='black')
         # plt.scatter(axial_exp, axial_exp, label='Expected position')
         axial_estimate = dict()
 
@@ -603,8 +606,8 @@ class Measure_Benchmarking():
             # evalu = self.total_diff(axial_exp, axial_bests)
             evalu = np.linalg.norm(axial_bests - axial_exp) / len(axial_bests) #L2-norm / num of expected positions.
             # fname = joinDir(path, measure_name)
-            # plt.scatter(range(len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
-            plt.plot(range(len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
+            plt.scatter(range(1, 1 + len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
+            # plt.plot(range(1, 1 + len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
             # self._plot_performance(fname)
             
             # save_data = {
@@ -617,10 +620,10 @@ class Measure_Benchmarking():
             # with open(path + "/" + measure_name + ".pkl", "wb") as f1:
             #     pickle.dump(save_data, f1)
 
-        plt.xlabel("Target position in mm, focused at 0 while Platform position at 6.87mm.")
+        plt.xlabel("Every 100 frames.")
         plt.ylabel("Axial position in mm.")
         plt.legend()
-        fig.savefig(path + '/measures_comparison', dpi='figure', transparent=False)
+        fig.savefig(path + '/measures_comparison_scatter', dpi='figure', transparent=False)
         plt.close(fig)
         return axial_estimate
     
