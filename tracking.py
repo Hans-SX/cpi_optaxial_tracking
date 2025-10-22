@@ -36,7 +36,7 @@ exec(readConfig())
 parser = argparse.ArgumentParser()
 parser.add_argument('--DataSet', type=str)
 parser.add_argument('--refName', nargs='?', default='refocused', type=str)
-parser.add_argument('--pattern', nargs='?', default=1, choices=[0, 1, 2, 3], type=int)
+parser.add_argument('--pattern', nargs='?', default=1, choices=[0, 1, 2, 3, 4], type=int)
 args = parser.parse_args()
 
 datapath = join(os.getcwd(), os.pardir, args.DataSet, 'data')
@@ -49,7 +49,6 @@ pattern = {
     2: Refocused_range(shift, SinusoidalForward(0, 17, 90, frequency=3, amp=3).pos_frames()['pos']).sinusoidal()[0],      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
     3: Refocused_range(shift).step_34()[0],
     4: Refocused_range(shift, 10.0).one_position()[0]
-
 }
 try_shifts = pattern[args.pattern]
 
