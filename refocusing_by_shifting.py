@@ -145,9 +145,9 @@ def refocusG2fast(array4D, shift):
     for j in range(NBy):
         for i in range(NBx):
             if -y_shifts[j]%1==0 and x_shifts[i]%1==0:
-                refocused += shift_with_zeros(array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                refocused += shift_with_zeros(array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
             else:
-                refocused += shift_subpixel(array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                refocused += shift_subpixel(array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
     axial = -focal/(1 + MA/MB * pixB/pixA /shift) if shift!=0 else 0
    
     return refocused, axial
