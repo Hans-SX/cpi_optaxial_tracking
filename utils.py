@@ -284,15 +284,6 @@ class Calculating_G2():
         self.G2 = np.pad(self.G2, ((pad, pad), (pad, pad), (0,0), (0,0)))
         return self.G2
 
-def target_axials(x, n, stepsize):
-    """
-    x: the expected position
-    n: 2*n + 1 will be the total examined positions
-    """
-    left_values = [x - i * stepsize for i in range(1, n+1)]
-    right_values = [x + i * stepsize for i in range(1, n+1)]
-    return left_values[::-1] + [x] + right_values
-
 class Refocusing_by_Shifting():
     def __init__(self, array4D, shifts, focal, MA, MB, pixA, pixB, path):
         self.array4D = array4D
@@ -313,7 +304,8 @@ class Refocusing_by_Shifting():
         plt.close("all")
     
     def _axial(self, shift):
-        self.axial = -self.focal/(1 + self.MA/self.MB * self.pixB/self.pixA /shift) if shift!=0 else 0
+        self.axial = self.focal/(self.MA/self.MB * self.pixB/self.pixA /shift -1)
+        # for the experimental data: -self.focal/(1 + self.MA/self.MB * self.pixB/self.pixA /shift) if shift!=0 else 0
         return self.axial
     
     def _shift_with_zeros(self, arr, shift):
@@ -387,11 +379,11 @@ class Refocusing_by_Shifting():
             for i in range(NBx):
                 if -y_shifts[j]%1==0 and x_shifts[i]%1==0:
                     # for simulation data, reflect x.
-                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
-                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
+                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
                 else:
-                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
-                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
+                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
         self.axial = self._axial(shift)
         self._plt(refocused, shift, ind)
         return refocused, self.axial
