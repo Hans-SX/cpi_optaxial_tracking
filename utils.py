@@ -304,8 +304,8 @@ class Refocusing_by_Shifting():
         plt.close("all")
     
     def _axial(self, shift):
-        self.axial = self.focal/(self.MA/self.MB * self.pixB/self.pixA /shift -1)
-        # for the experimental data: -self.focal/(1 + self.MA/self.MB * self.pixB/self.pixA /shift) if shift!=0 else 0
+        self.axial = -self.focal/(1 + self.MA/self.MB * self.pixB/self.pixA /shift) if shift!=0 else 0
+        # for the simulation data: self.focal/(self.MA/self.MB * self.pixB/self.pixA /shift -1)
         return self.axial
     
     def _shift_with_zeros(self, arr, shift):
