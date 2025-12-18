@@ -450,7 +450,8 @@ class Signal_to_BG_Noise_Ratio():
             ind_best = 0
         else:
             ind_best = np.argwhere(sbnr == np.max(sbnr))[0]
-        name = "sbnr_" + f'%.1E' % decimal.Decimal(threshold)
+        # name = "sbnr_" + f'%.1E' % decimal.Decimal(threshold)
+        name = 'SNR, '
         return np.max(sbnr), ind_best, sbnr_exp, name
     
     def apply(self):
@@ -508,7 +509,8 @@ class Measures(Signal_to_BG_Noise_Ratio):
         rank_exp = rank[axial_exp]
         ind = np.argwhere(rank == np.max(rank))[0]  #Don't know why, it is in [[]] form.
         rank = np.max(rank)
-        name = "maxint_minstdbg_" + f'%.1E' % decimal.Decimal(threshold)
+        # name = "maxint_minstdbg_" + f'%.1E' % decimal.Decimal(threshold)
+        name = 'SRSN, '
         return rank, ind, rank_exp, name
 
     def apply_measures(self, apply_measures):
@@ -559,7 +561,14 @@ class STD_BG_Thresholds():
 
 class Measure_Benchmarking():
     """
+    ref_steps: the refocused results in different steps, images.
+    axials_steps: the axial positions corresponding to the refocused results, axial positions.
     measure: to decide which is the best refocused.
+
+    return:
+        val_bests: the best values in all steps of the given measure.
+        axial_bests: the axial positions corresponding to the best values.
+        vals_exp: the values of the given measure on the expected positions of all steps.
     """
     def __init__(self, ref_steps, axials_steps):
         self.ref = ref_steps
@@ -579,34 +588,22 @@ class Measure_Benchmarking():
         axial_bests = np.asarray(axial_bests).reshape(-1)
         return val_bests, axial_bests,  vals_exp, measure_name
     
-    # def _plot_performance(self, fname):
-    #     fig = plt.figure()
-    #     plt.plot(self.axial_exp, self.axial_exp, label='Expected position')
-    #     plt.plot(self.axial_exp, self.axial_bests, label='Refocused position ' + fname)
-    #     plt.xlabel("Target position in mm, focused at 0 while Platform position at 6.87mm.")
-    #     plt.ylabel("Axial position in mm.")
-    #     plt.legend()
-    #     fig.savefig(self.path, dpi='figure',transparent=False)
-    #     plt.close(fig)
-    
     def total_diff(self, axial_exp, axial_bests):
         return np.sum(np.abs(axial_exp - axial_bests))
 
     def save_analysis(self, measures, axial_exp, path):
-        # self.measures = measures
-        # self.axial_exp = axial_exp
         fig = plt.figure()
         plt.plot(range(1, 1 + len(axial_exp)), axial_exp, label='Expected position', c='black')
-        # plt.scatter(axial_exp, axial_exp, label='Expected position')
         axial_estimate = dict()
 
         for measure in measures:
             val_bests, axial_bests,  val_exp, measure_name = self._measure_vals_axials(measure)
             axial_estimate[measure_name] = axial_bests
-            # evalu = self.total_diff(axial_exp, axial_bests)
-            evalu = np.linalg.norm(axial_bests - axial_exp) / len(axial_bests) #L2-norm / num of expected positions.
+            mae = self.total_diff(axial_exp, axial_bests) / len(axial_bests)  # Mean Absolute Error
+            fro = np.linalg.norm(axial_bests - axial_exp) # Frobenius-norm / num of expected positions.
+            mse = np.mean((axial_bests - axial_exp)**2)  # Mean Squared Error
             # fname = joinDir(path, measure_name)
-            plt.scatter(range(1, 1 + len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
+            plt.scatter(range(1, 1 + len(axial_exp)), axial_bests, label= measure_name + ' (MSE, MAE) = ' + f'({mse:.3f}, {mae:.3f})')
             # plt.plot(range(1, 1 + len(axial_exp)), axial_bests, label='Ref., ' + measure_name + '_' + f'{evalu:.3f}')
             # self._plot_performance(fname)
             
