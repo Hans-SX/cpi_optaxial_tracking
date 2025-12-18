@@ -93,14 +93,15 @@ def target_axials(x, n, stepsize):
     right_values = [x + i * stepsize for i in range(1, n+1)]
     return left_values[::-1] + [x] + right_values
 
-def shift(position, MA=4.2, MB=0.32, focal=30, pixA=5*4*6.5e-3, pixB=5*6.5e-3):
-    shift = - position * MA/MB / (position + focal) * pixB/pixA
-    return shift
+# def shift(position, MA=4.2, MB=0.32, focal=30, pixA=5*4*6.5e-3, pixB=5*6.5e-3):
+#     shift = - position * MA/MB / (position + focal) * pixB/pixA
+#     return shift
 
 class Refocused_range():
     """
     target_axials(x, num, dis), num and dis should be put it config.py as parameters.
     They determine the range and the width of refocused positions.
+    shift: a function returns number of pixels to shift according to the distance to the focal plane.
     """
     def __init__(self, shift, positions=None):
         self.pos = positions
@@ -130,18 +131,16 @@ class Refocused_range():
         expect_ref = [x for xs in expect_ref for x in xs]
         expect_ref = 6.87 - np.array(expect_ref)
         try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
-        # try_ref_to = [target_axials(x, 5, 0.3) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
     
     def sinusoidal(self):
         expect_ref = 6.87 - self.pos
-        # try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
         try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
     
     def one_position(self):
-        try_ref_to = target_axials(self.pos, 2, 0.5)
+        try_ref_to = target_axials(self.pos, 3, 0.5)
         try_shifts = [self.shift(try_ref_to[x]) for x, _ in enumerate(try_ref_to)]
         return repeat(try_shifts), self.pos
