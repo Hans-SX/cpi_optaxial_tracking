@@ -382,8 +382,8 @@ class Refocusing_by_Shifting():
                     refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
                     # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
                 else:
-                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
-                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                    refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
+                    # refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
         self.axial = self._axial(shift)
         self._plt(refocused, shift, ind)
         return refocused, self.axial
