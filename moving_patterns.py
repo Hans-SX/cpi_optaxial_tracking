@@ -93,10 +93,6 @@ def target_axials(x, n, stepsize):
     right_values = [x + i * stepsize for i in range(1, n+1)]
     return left_values[::-1] + [x] + right_values
 
-# def shift(position, MA=4.2, MB=0.32, focal=30, pixA=5*4*6.5e-3, pixB=5*6.5e-3):
-#     shift = - position * MA/MB / (position + focal) * pixB/pixA
-#     return shift
-
 class Refocused_range():
     """
     target_axials(x, num, dis), num and dis should be put it config.py as parameters.
@@ -113,9 +109,9 @@ class Refocused_range():
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
 
-    def fixed(self):
-        expect_ref = 6.87 - 0.25 * np.array(range(69))
-        try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
+    def fixed(self, focal_mpl=4.56, dp1=0.5, steps=21):
+        expect_ref = focal_mpl - dp1 * np.array(range(steps))
+        try_ref_to = [target_axials(x, 20, 0.08) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
     

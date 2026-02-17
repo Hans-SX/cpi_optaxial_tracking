@@ -7,7 +7,7 @@ Created on  Mar. 03, 2025
 import numpy as np
 from scipy.optimize import curve_fit
 from tifffile import imread
-from skimage import io
+# from skimage import io
 from os.path import join as joinDir
 from datetime import datetime
 import os, sys, time
@@ -237,9 +237,12 @@ def PlotCorrFunc2D(corrFunc, outDir, differential=False):
     PrintSectionClose()
 
 class Calculating_G2():
-    def __init__(self, fileA, fileB):
+    def __init__(self, fileA, fileB, frames=None):
         self.fileA = imread(fileA)
         self.fileB = imread(fileB)
+        if frames is not None:
+            self.fileA = self.fileA[:frames]
+            self.fileB = self.fileB[:frames]
 
     def _bin_3d_array(self, arr, bin_size):
         """
@@ -378,12 +381,12 @@ class Refocusing_by_Shifting():
         for j in range(NBy):
             for i in range(NBx):
                 if -y_shifts[j]%1==0 and x_shifts[i]%1==0:
-                    # for simulation data, reflect x.
-                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
-                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                    # for simulation data, reflect x -> -x_shifts.
+                    # refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
+                    refocused += self._shift_with_zeros(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
                 else:
-                    refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
-                    # refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
+                    # refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
+                    refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
         self.axial = self._axial(shift)
         self._plt(refocused, shift, ind)
         return refocused, self.axial

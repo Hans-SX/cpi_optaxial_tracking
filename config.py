@@ -19,8 +19,8 @@ G2_DIR     = ""
 # Binning
 #! if apply physical binning (seting on cameras), pixel size is 6.5e-3 * phybin
 binA, binB = 1, 1
-cambinA = 10
-cambinB = 2
+cambinA = 8
+cambinB = 4
 # pixel size of Andor Zyla 5.5 camera.
 pixel = 6.5e-3
 # pixel size of simulated pinhole
@@ -30,8 +30,9 @@ pixel = 6.5e-3
 # NA, NB     = Na//binA, Nb//binB
 pixA, pixB = cambinA * pixel * binA, cambinB * pixel * binB
 # REFOCUSING
-focal = 30
-MA    = 4.2    # 1 for simulation data, 4.2 for experiment.
+focal = 26.67   # focal length of the objective lens.
+# Mspa: 3.6608; Mang: 0.4147 for the re-aligned setup.
+MA    = 3.66    # 1 for simulation data, 4.2 for experiment.
 MB    = 0.32    # 1 for simulation data, 0.32 for experiment.
 
 

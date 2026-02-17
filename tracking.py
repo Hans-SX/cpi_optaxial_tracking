@@ -40,8 +40,8 @@ parser.add_argument('--pattern', nargs='?', default=1, choices=[0, 1, 2, 3, 4], 
 parser.add_argument('--expect', nargs='?', default=1, type=float)
 args = parser.parse_args()
 
-datapath = join(os.getcwd(), os.pardir, "simulated_data", args.DataSet, 'data')
-outpath = join(os.getcwd(), os.pardir, "simulated_data", args.DataSet, args.refName)
+datapath = join(os.getcwd(), os.pardir, args.DataSet, 'data')
+outpath = join(os.getcwd(), os.pardir, args.DataSet, args.refName)
 outDir, armAfiles, armBfiles = setDirectories_twocams(stdData=STD_PATH, stdOut=STD_PATH, timeTag=TT_BOOL, dataPath=datapath, outPath=outpath, armA=armA_PATH, armB=armB_PATH)
 
 pattern = {
