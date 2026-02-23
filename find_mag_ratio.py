@@ -93,7 +93,9 @@ plot_G2s(g2s, outDir)
 apply_measure = ['max_intensity']
 measure = Measures()
 m1 = Measure_Benchmarking(ref_steps, axial_steps)
-m1._measure_vals_axials(measure.apply_measures(apply_measure))
+ratio_bests = m1._measure_vals_axials(measure.apply_measures(apply_measure)[0])[1]
+print("ratio range: ", np.min(ratio_bests), np.max(ratio_bests))
+print("ratio average: ", np.mean(ratio_bests))
 
 """
 Measure analysis is separated to another process.

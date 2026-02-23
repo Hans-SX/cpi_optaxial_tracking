@@ -63,7 +63,7 @@ timer.start("Whole refocusing")
 for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
 # for Afile, Bfile in zip(armAfiles, armBfiles):
     timer.start("Refocusing interval " + str(cyc+1))
-    arr = Calculating_G2(Afile, Bfile)
+    arr = Calculating_G2(Afile, Bfile, frames=20)
     G2 = arr.correlation(binA, binB)
     g2s.append(G2)
     G2 = arr.padding(pad=25)
