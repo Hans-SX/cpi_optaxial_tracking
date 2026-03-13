@@ -288,19 +288,18 @@ class Calculating_G2():
         return self.G2
 
 class Refocusing_ratio():
-    def __init__(self, array4D, shifts, focal, M_ratio, pixA, pixB, path):
+    def __init__(self, array4D, shifts, focal, swipe, pixA, pixB, path):
         self.array4D = array4D
         self.shifts = shifts
-        self.focal, self.M_ratio, self.pixA, self.pixB = focal, M_ratio, pixA, pixB
+        self.focal, self.swipe, self.pixA, self.pixB = focal, swipe, pixA, pixB
         self.path = path
-        self.axial = 0
     
-    def _plt(self, refocused_result, M_ratio, ind):
-        path = joinDir(self.path, str(ind) + "_Refocus_plot_"+ str(round(M_ratio, 3))+".png")
+    def _plt(self, refocused_result, title, ind):
+        path = joinDir(self.path, str(ind) + "_Refocus_plot_"+ str(round(title, 3))+".png")
 
         fig = plt.figure()
         plt.imshow(refocused_result, cmap='gray')
-        plt.title("Refocused image_MagRatio = "+ str(round(M_ratio, 3)))
+        plt.title("Refocused image_misalign = "+ str(round(title, 3)))
         plt.colorbar()
         fig.savefig(path, dpi='figure',transparent=False)
         plt.close("all")
@@ -381,8 +380,8 @@ class Refocusing_ratio():
                 else:
                     # refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
                     refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
-        self._plt(refocused, self.M_ratio[ind-1], ind)
-        return refocused, self.M_ratio[ind-1]
+        self._plt(refocused, self.swipe[ind-1], ind)
+        return refocused, self.swipe[ind-1]
 
     def evaluate_refocusG2fast_parallel(self, n_jobs=-1):
         """

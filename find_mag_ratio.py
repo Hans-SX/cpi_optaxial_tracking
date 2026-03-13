@@ -43,9 +43,9 @@ outpath = join(os.getcwd(), os.pardir, args.DataSet, args.refName)
 outDir, armAfiles, armBfiles = setDirectories_twocams(stdData=STD_PATH, stdOut=STD_PATH, timeTag=TT_BOOL, dataPath=datapath, outPath=outpath, armA=armA_PATH, armB=armB_PATH)
 
 positions = {
-    0: np.linspace(2.56, 3.56, int(1 / 0.05) + 1),
-    1: np.linspace(5.56, 7.56, int(2 / 0.05) + 1),
-    2: np.linspace(7.56, 9.56, int(2 / 0.05) + 1)
+    0: -(4.56 - np.linspace(2.56, 3.56, int(1 / 0.05) + 1)),
+    1: -(4.56 - np.linspace(5.56, 7.56, int(2 / 0.05) + 1)),
+    2: -(4.56 - np.linspace(7.56, 9.56, int(2 / 0.05) + 1))
 }
 try_shifts = [shift(pos) for pos in positions[args.positions]]
 
@@ -67,7 +67,7 @@ for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
     if not os.path.exists(join(outDir, str(cyc+1))):
         os.makedirs(join(outDir, str(cyc+1)))
     
-    refocusing = Refocusing_ratio(G2, shifts, focal, M_ratio, pixA, pixB, join(outDir, str(cyc+1)))
+    refocusing = Refocusing_ratio(G2, shifts, focal, dis, pixA, pixB, join(outDir, str(cyc+1)))
     refocused_results, ratio_results = refocusing.evaluate_refocusG2fast_parallel()
 
     ref_steps["s" + str(cyc+1)] = refocused_results
@@ -78,6 +78,8 @@ for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
     
     timer.stop("Refocusing interval " + str(cyc+1))
     cyc += 1
+    if cyc > 10:
+        break
 
 timer.stop("Whole refocusing")
 
@@ -93,9 +95,10 @@ plot_G2s(g2s, outDir)
 apply_measure = ['max_intensity']
 measure = Measures()
 m1 = Measure_Benchmarking(ref_steps, axial_steps)
-ratio_bests = m1._measure_vals_axials(measure.apply_measures(apply_measure)[0])[1]
-print("ratio range: ", np.min(ratio_bests), np.max(ratio_bests))
-print("ratio average: ", np.mean(ratio_bests))
+swipe_bests = m1._measure_vals_axials(measure.apply_measures(apply_measure)[0])[1]
+print("swipe range: ", np.min(swipe_bests), np.max(swipe_bests))
+print("swipe average: ", np.mean(swipe_bests))
+print("swipe bests: ", swipe_bests)
 
 """
 Measure analysis is separated to another process.
