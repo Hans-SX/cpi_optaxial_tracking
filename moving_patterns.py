@@ -109,10 +109,10 @@ class Refocused_range():
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
 
-    def fixed(self, focal_mpl=4.56, dp1=0.5, steps=21):
+    def fixed(self, focal_mpl=8.5, dp1=0.2, steps=41):
         expect_ref = focal_mpl - dp1 * np.array(range(steps))
-        try_ref_to = [target_axials(x, 20, 0.08) for x in expect_ref]
-        try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
+        try_ref_to = expect_ref
+        try_shifts = [self.shift(x) for x in try_ref_to]
         return try_shifts, expect_ref
     
     def bigf_smallb(self):
@@ -137,6 +137,6 @@ class Refocused_range():
         return try_shifts, expect_ref
     
     def one_position(self):
-        try_ref_to = target_axials(self.pos, 3, 0.5)
-        try_shifts = [self.shift(try_ref_to[x]) for x, _ in enumerate(try_ref_to)]
-        return repeat(try_shifts), self.pos
+        try_ref_to = 1.2
+        try_shifts = [self.shift(try_ref_to)]
+        return try_shifts, self.pos

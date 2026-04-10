@@ -11,12 +11,12 @@ from os.path import join
 import matplotlib.pyplot as plt
 import pickle
 
-from utils import readConfig, setDirectories_twocams, Calculating_G2, Refocusing_by_Shifting, plot_G2s, Timer
+from utils import readConfig, setDirectories_twocams, Calculating_G2, Refocusing_ratio, plot_G2s, Timer
 from config import shift
 from moving_patterns import BigStepForward_SmallStepBack, SinusoidalForward, Refocused_range
 
 """
-- Run this code in conda env cpi_tracking under the parent directory cpi_optaxial_tracking.
+- Run this code in conda env cpi_tracking under the parent directory of cpi_optaxial_tracking.
 - The layout of data and code structure will be:
     |parent folder
         |cpi_optaxial_tracking
@@ -57,21 +57,29 @@ cyc = 0
 # init_guess = [1, 0, 0, 80]
 ref_steps = dict()
 axial_steps = dict()
-g2s = []
+# g2s = []
 timer = Timer()
 timer.start("Whole refocusing")
 for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
 # for Afile, Bfile in zip(armAfiles, armBfiles):
+    # if cyc < 13:
+    #     print("Step " + str(cyc+1) + " skipped.")
+    #     cyc += 1
+    #     continue
+    # elif cyc > 31:
+    #     print("Step " + str(cyc+1) + " skipped.")
+    #     cyc += 1
+    #     continue
     timer.start("Refocusing interval " + str(cyc+1))
-    arr = Calculating_G2(Afile, Bfile, frames=20)
+    arr = Calculating_G2(Afile, Bfile, frames=100)
     G2 = arr.correlation(binA, binB)
-    g2s.append(G2)
+    # g2s.append(G2)
     G2 = arr.padding(pad=25)
     
     if not os.path.exists(join(outDir, str(cyc+1))):
         os.makedirs(join(outDir, str(cyc+1)))
     
-    refocusing = Refocusing_by_Shifting(G2, shifts, focal, MA, MB, pixA, pixB, join(outDir, str(cyc+1)))
+    refocusing = Refocusing_ratio(G2, shifts, focal, M_ratio, pixA, pixB, join(outDir, str(cyc+1)))
     refocused_results, axial_results = refocusing.evaluate_refocusG2fast_parallel()
 
     ref_steps["s" + str(cyc+1)] = refocused_results
@@ -96,8 +104,8 @@ with open(join(outDir, "ref_steps.pkl"), "wb") as f1:
 with open(join(outDir, "axial_steps.pkl"), "wb") as f2:
     pickle.dump(axial_steps, f2)
 
-print("Refocusing done, plot G2s.")
-plot_G2s(g2s, outDir)
+print("Refocusing done.")
+# plot_G2s(g2s, outDir)
 
 """
 Measure analysis is separated to another process.

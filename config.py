@@ -20,30 +20,24 @@ G2_DIR     = ""
 
 # Binning
 #! if apply physical binning (seting on cameras), pixel size is 6.5e-3 * phybin
-binA, binB = 1, 1
-cambinA = 8
-cambinB = 4
+binA, binB = 2, 2
+cambinA = 2
+cambinB = 1
 # pixel size of Andor Zyla 5.5 camera.
 pixel = 6.5e-3
-# pixel size of simulated pinhole
-# FoV = 3e-3
-# n_pixels = 1024
-# pixel = FoV / n_pixels
-# NA, NB     = Na//binA, Nb//binB
 pixA, pixB = cambinA * pixel * binA, cambinB * pixel * binB
 # REFOCUSING
 focal = 26.67   # focal length of the objective lens.
-# Mspa: 3.6608; Mang: 0.4147 for the re-aligned setup.
-MA    = 3.66    # 1 for simulation data, 4.2 for experiment.
-MB    = 0.41    # 1 for simulation data, 0.32 for experiment.
-M_ratio = MA / MB
+# MA    = 3.66    # 1 for simulation data, 4.2 for experiment.
+# MB    = 0.41    # 1 for simulation data, 0.32 for experiment.
+M_ratio = np.linspace(1, 3, 11)
 # M_ratio = np.linspace(11, 14, 6)
 # displacement of misaligment on FPP
-dis = np.linspace(-20, -40, 11)
+dis = focal
 
 def shift(position):
     # for swiping angular arm alignment error on FPP:
-    shift = position / focal * MA/MB / (1 + position / focal * (1 - dis/focal)) * pixB/pixA
+    shift = - position / focal * M_ratio / (1 + position / focal * (1 - dis/focal)) * pixB/pixA
     # for swiping ratios: shift = - position * M_ratio/ (position + focal) * pixB/pixA
     # for the simulation data: position * MA/MB / (position + focal) * pixB/pixA
     return shift
