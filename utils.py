@@ -288,18 +288,21 @@ class Calculating_G2():
         return self.G2
 
 class Refocusing_ratio():
-    def __init__(self, array4D, shifts, focal, swipe, pixA, pixB, path):
+    """
+    variable: could be shits or manification ratios.
+    """
+    def __init__(self, array4D, shifts, focal, variable, pixA, pixB, path):
         self.array4D = array4D
         self.shifts = shifts
-        self.focal, self.swipe, self.pixA, self.pixB = focal, swipe, pixA, pixB
+        self.focal, self.variable, self.pixA, self.pixB = focal, variable, pixA, pixB
         self.path = path
     
     def _plt(self, refocused_result, title, ind):
-        path = joinDir(self.path, str(ind) + "_Refocus_plot_"+ str(round(title, 3))+".png")
+        path = joinDir(self.path, str(ind+1) + "_Refocus_plot_"+ str(round(title, 3))+".png")
 
         fig = plt.figure()
         plt.imshow(refocused_result, cmap='gray')
-        plt.title("Refocused image_misalign = "+ str(round(title, 3)))
+        plt.title("Refocused image at "+ str(round(title, 3)) + " mm")
         plt.colorbar()
         fig.savefig(path, dpi='figure',transparent=False)
         plt.close("all")
@@ -380,8 +383,8 @@ class Refocusing_ratio():
                 else:
                     # refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], -x_shifts[i]))
                     refocused += self._shift_subpixel(self.array4D[:, :, j, i], (-y_shifts[j], x_shifts[i]))
-        self._plt(refocused, self.swipe[ind-1], ind)
-        return refocused, self.swipe[ind-1]
+        self._plt(refocused, self.variable[ind], ind)
+        return refocused, self.variable[ind]
 
     def evaluate_refocusG2fast_parallel(self, n_jobs=-1):
         """
@@ -400,7 +403,7 @@ class Refocusing_ratio():
 
         # Run refocusG2fast in parallel for each shift
         results = Parallel(n_jobs=n_jobs, backend="loky")(
-            delayed(self._refocusG2fast)(shift, ind+1) for ind, shift in enumerate(shifts)
+            delayed(self._refocusG2fast)(shift, ind) for ind, shift in enumerate(shifts)
         )
 
         # Extract results

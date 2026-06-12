@@ -21,8 +21,8 @@ G2_DIR     = ""
 # Binning
 #! if apply physical binning (seting on cameras), pixel size is 6.5e-3 * phybin
 binA, binB = 2, 2
-cambinA = 2
-cambinB = 1
+cambinA = 4
+cambinB = 4
 # pixel size of Andor Zyla 5.5 camera.
 pixel = 6.5e-3
 pixA, pixB = cambinA * pixel * binA, cambinB * pixel * binB
@@ -30,9 +30,8 @@ pixA, pixB = cambinA * pixel * binA, cambinB * pixel * binB
 focal = 26.67   # focal length of the objective lens.
 # MA    = 3.66    # 1 for simulation data, 4.2 for experiment.
 # MB    = 0.41    # 1 for simulation data, 0.32 for experiment.
-M_ratio = np.linspace(1, 3, 11)
-# M_ratio = np.linspace(11, 14, 6)
-# displacement of misaligment on FPP
+M_ratio = 12.682  # M_ratio = MA/MB, estimated by the data from different positions. 
+# displacement of misaligment on FPP, equal to focal since now the angular arm is focused on the Fourier plane of the objective.
 dis = focal
 
 def shift(position):
@@ -41,6 +40,11 @@ def shift(position):
     # for swiping ratios: shift = - position * M_ratio/ (position + focal) * pixB/pixA
     # for the simulation data: position * MA/MB / (position + focal) * pixB/pixA
     return shift
+
+def axial(shifts):
+    # only for dis = focal:
+    position = - shifts * focal / M_ratio * pixA/pixB
+    return position
 
 """
 Just for checking the formula consistency, not used in the refocusing process.

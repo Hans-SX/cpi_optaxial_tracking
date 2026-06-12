@@ -4,13 +4,15 @@ Created on  Jun. 12, 2025
 @author: Shih-Xian
 """
 from abc import ABC, abstractmethod
-from typing import List, Tuple
-import time
+# from typing import List, Tuple
+# import time
+# from weakref import ref
 import numpy as np
 # from andor3 import Andor3
-from pipython import GCSDevice
-from pipython import pitools
-from itertools import cycle, repeat
+# from pipython import GCSDevice
+# from pipython import pitools
+from itertools import cycle
+# from config import shift
 
 """
 Duplicated from the moving_patterns.py in acquisition_while_moving folder.
@@ -103,35 +105,36 @@ class Refocused_range():
         self.pos = positions
         self.shift = shift
 
-    def step_34(self):
-        expect_ref = 6.87 - np.linspace(0.25, 16.75, 34)
+    def step_34(self, focal_mpl=8.8):
+        expect_ref = np.linspace(0.25, 16.75, 34) - focal_mpl
         try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
 
-    def fixed(self, focal_mpl=8.5, dp1=0.2, steps=41):
+    def fixed(self, focal_mpl=8.8, dp1=0.2, steps=41):
         expect_ref = focal_mpl - dp1 * np.array(range(steps))
         try_ref_to = expect_ref
         try_shifts = [self.shift(x) for x in try_ref_to]
         return try_shifts, expect_ref
     
-    def bigf_smallb(self):
+    def bigf_smallb(self, start:float, end:float, interval:float=0.5, pattern=np.array((6, -3)), focal_mpl=8.8):
         expect_ref = []
-        for i in range(len(self.pos) - 1):
-            if i == 0:
-                expect_ref.append(list(np.arange(0.25, self.pos[i], 0.5))[:])
-            if self.pos[i] < self.pos[i+1]:
-                expect_ref.append(list(np.arange(self.pos[i] + 0.25, self.pos[i+1], 0.5))[:])
-            elif self.pos[i] > self.pos[i+1]:
-                expect_ref.append(list(np.arange(self.pos[i] - 0.25, self.pos[i+1], -0.5))[:])
+        for i, pos in enumerate(self.pos):
+            if i == len(self.pos) - 1:
+                break
+            elif i % 2 == 0:
+                expect_ref.append(np.arange(pattern[0]) * interval + pos)
+            else:
+                expect_ref.append(np.arange(-pattern[1]) * -1 * interval + pos)
+    
         expect_ref = [x for xs in expect_ref for x in xs]
-        expect_ref = 6.87 - np.array(expect_ref)
-        try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
+        expect_ref = np.array(expect_ref) - focal_mpl
+        try_ref_to = [target_axials(x, 10, 0.05) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
     
-    def sinusoidal(self):
-        expect_ref = 6.87 - self.pos
+    def sinusoidal(self, focal_mpl=8.8):
+        expect_ref = self.pos - focal_mpl
         try_ref_to = [target_axials(x, 20, 0.05) for x in expect_ref]
         try_shifts = [[self.shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
         return try_shifts, expect_ref
@@ -140,3 +143,65 @@ class Refocused_range():
         try_ref_to = 1.2
         try_shifts = [self.shift(try_ref_to)]
         return try_shifts, self.pos
+    
+def mean_positions_per_second(shift, positions, focal_mpl=8.8, speed=0.5, dt=1.0):
+    """
+    For a sequence of waypoints, return the mean position of the platform
+    over each dt-second interval, assuming constant speed between waypoints.
+    Turning points (waypoints) are NOT included in the output.
+
+    Parameters
+    ----------
+    positions : array-like
+        1D array of target positions along the axis.
+    focal_mpl : float, default 8.8
+        Focal plane position in mm.
+    speed : float
+        Speed in mm/s (same units as positions).
+    dt : float, default 1.0
+        Time interval in seconds for which the mean position is computed.
+
+    Returns
+    -------
+    np.ndarray
+        1D array of mean positions over each dt-second interval.
+    """
+    positions = np.asarray(positions, dtype=float)
+    if positions.ndim != 1 or len(positions) < 2:
+        raise ValueError("positions must be 1D with at least 2 points")
+    if speed <= 0 or dt <= 0:
+        raise ValueError("speed and dt must be > 0")
+
+    res = []
+
+    for p0, p1 in zip(positions[:-1], positions[1:]):
+        # Segment length and travel time
+        dist = abs(p1 - p0)
+        if dist == 0:
+            continue
+        seg_time = dist / speed
+
+        # Split segment into 1‑second intervals (or dt‑second intervals)
+        n_steps = int(seg_time // dt)
+        if n_steps == 0:
+            continue
+
+        # Direction sign
+        sgn = 1 if p1 > p0 else -1
+
+        # For each dt‑second interval, compute the mean position over that interval
+        for i in range(n_steps):
+            t_start = i * dt
+            t_end   = (i + 1) * dt
+            # positions at the start and end of the interval (within this segment)
+            x_start = p0 + sgn * (t_start / seg_time) * dist
+            x_end   = p0 + sgn * (t_end   / seg_time) * dist
+            # mean over the interval
+            x_mean = 0.5 * (x_start + x_end)
+            res.append(x_mean)
+
+        expect_ref = np.array(res, dtype=float) - focal_mpl
+        try_ref_to = [target_axials(x, 10, 0.1) for x in expect_ref]
+        try_shifts = [[shift(try_ref_to[x][y]) for y, _ in enumerate(try_ref_to[x])] for x, _ in enumerate(try_ref_to)]
+
+    return try_shifts, expect_ref

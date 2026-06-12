@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 import pickle
 
 from utils import readConfig, setDirectories_twocams, Calculating_G2, Refocusing_ratio, plot_G2s, Timer
-from config import shift
-from moving_patterns import BigStepForward_SmallStepBack, SinusoidalForward, Refocused_range
+from config import shift, axial
+from moving_patterns import BigStepForward_SmallStepBack, SinusoidalForward, Refocused_range, mean_positions_per_second
 
 """
 - Run this code in conda env cpi_tracking under the parent directory of cpi_optaxial_tracking.
@@ -45,13 +45,14 @@ outpath = join(os.getcwd(), os.pardir, args.DataSet, args.refName)
 outDir, armAfiles, armBfiles = setDirectories_twocams(stdData=STD_PATH, stdOut=STD_PATH, timeTag=TT_BOOL, dataPath=datapath, outPath=outpath, armA=armA_PATH, armB=armB_PATH)
 
 pattern = {
-    0: Refocused_range(shift).fixed()[0],
-    1: Refocused_range(shift, BigStepForward_SmallStepBack(0, 17, pattern=np.array((14, -4))).pos_frames()['pos']).bigf_smallb()[0],
-    2: Refocused_range(shift, SinusoidalForward(0, 17, 90, frequency=3, amp=3).pos_frames()['pos']).sinusoidal()[0],      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
-    3: Refocused_range(shift).step_34()[0],
-    4: Refocused_range(shift, args.expect).one_position()[0]
+    0: Refocused_range(shift).fixed(),
+    1: mean_positions_per_second(shift, BigStepForward_SmallStepBack(6.8, 12.8, pattern=np.array((6, -3))).pos_frames(interval=0.1, time_interval=50)['pos'], speed=0.1),  # the speed is set to 0.1 mm/s.
+    2: Refocused_range(shift, SinusoidalForward(0, 17, 90, frequency=3, amp=3).pos_frames()['pos']).sinusoidal(),      # no obvious way to estimate the expected position of the platform in sinusodial movement, apply BigStepForward_SmallStepBack for generating shifts.
+    3: Refocused_range(shift).step_34(),
+    4: Refocused_range(shift, args.expect).one_position()
 }
-try_shifts = pattern[args.pattern]
+try_shifts = pattern[args.pattern][0]
+expect_ref = pattern[args.pattern][1]
 
 cyc = 0
 # init_guess = [1, 0, 0, 80]
@@ -61,15 +62,6 @@ axial_steps = dict()
 timer = Timer()
 timer.start("Whole refocusing")
 for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
-# for Afile, Bfile in zip(armAfiles, armBfiles):
-    # if cyc < 13:
-    #     print("Step " + str(cyc+1) + " skipped.")
-    #     cyc += 1
-    #     continue
-    # elif cyc > 31:
-    #     print("Step " + str(cyc+1) + " skipped.")
-    #     cyc += 1
-    #     continue
     timer.start("Refocusing interval " + str(cyc+1))
     arr = Calculating_G2(Afile, Bfile, frames=100)
     G2 = arr.correlation(binA, binB)
@@ -79,7 +71,8 @@ for Afile, Bfile, shifts in zip(armAfiles, armBfiles, try_shifts):
     if not os.path.exists(join(outDir, str(cyc+1))):
         os.makedirs(join(outDir, str(cyc+1)))
     
-    refocusing = Refocusing_ratio(G2, shifts, focal, M_ratio, pixA, pixB, join(outDir, str(cyc+1)))
+    ref_to = axial(np.array(shifts))
+    refocusing = Refocusing_ratio(G2, shifts, focal, ref_to, pixA, pixB, join(outDir, str(cyc+1)))
     refocused_results, axial_results = refocusing.evaluate_refocusG2fast_parallel()
 
     ref_steps["s" + str(cyc+1)] = refocused_results
